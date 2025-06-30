@@ -6,8 +6,7 @@ En begreppsmodell som beskriver de dokumenttyper, egenskaper och andra relaterad
 
 ## Allmänna råd
 
-Ett dokument med allmänna, icke-bindande, råd om tillämpningen av bindande regler i föreskrift, förordning eller 
-lag.
+Ett dokument med allmänna, icke-bindande, råd om tillämpningen av bindande regler i föreskrift, förordning eller lag.
 
 ## Allmänna råd-text
 
