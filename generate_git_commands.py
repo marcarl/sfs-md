@@ -1,22 +1,61 @@
 #!/usr/bin/env python3
 """
 Script som genererar git-kommandon baserat på SFS JSON-filer.
-Loopar igenom alla JSON-filer i mappen "sfs_2024" och skapar git commit-kommandon
-med utfärdandedatum som author date.
+Loopar igenom alla JSON-filer i mappen "sfs" och skapar markdown-filer
+från författningstexten samt git commit-kommandon med utfärdandedatum som author date.
 """
 
 import json
 import glob
+import os
 from datetime import datetime
+
+def clean_text(text):
+    """Rengör texten genom att ersätta \\r\\n med vanliga radbrytningar."""
+    if text:
+        return text.replace("\\r\\n", "\n").replace("\r\n", "\n")
+    return text
+
+def create_markdown_file(data, json_filename):
+    """Skapar en markdown-fil från JSON-data."""
+    # Skapa markdown-filnamn baserat på JSON-filnamn
+    base_name = os.path.splitext(os.path.basename(json_filename))[0]
+    markdown_filename = f"markdown/{base_name}.md"
+
+    # Skapa markdown-mappen om den inte finns
+    os.makedirs("markdown", exist_ok=True)
+
+    # Hämta data för markdown-filen
+    beteckning = data.get("beteckning", "Okänd beteckning")
+    rubrik = data.get("rubrik", "Ingen rubrik")
+    forfattningstext = ""
+
+    if "fulltext" in data and "forfattningstext" in data["fulltext"]:
+        forfattningstext = clean_text(data["fulltext"]["forfattningstext"])
+
+    # Skapa markdown-innehåll
+    markdown_content = f"# {beteckning}\n\n"
+    markdown_content += f"## {rubrik}\n\n"
+
+    if forfattningstext:
+        markdown_content += forfattningstext
+    else:
+        markdown_content += "*Ingen författningstext tillgänglig*"
+
+    # Skriv markdown-filen
+    with open(markdown_filename, "w", encoding="utf-8") as f:
+        f.write(markdown_content)
+
+    return markdown_filename
 
 def generate_git_commands():
     """Genererar git-kommandon för alla SFS JSON-filer."""
 
-    # Hitta alla JSON-filer i sfs_2024 mappen
-    json_files = glob.glob("sfs_2024/*.json")
+    # Hitta alla JSON-filer i sfs mappen
+    json_files = glob.glob("sfs/*.json")
 
     if not json_files:
-        print("Inga JSON-filer hittades i mappen sfs_2024/")
+        print("Inga JSON-filer hittades i mappen sfs/")
         return
 
     # Sortera filerna för konsistent ordning
@@ -41,6 +80,9 @@ def generate_git_commands():
                     utfardad_datetime = data["fulltext"]["utfardadDateTime"]
                     
                     if utfardad_datetime:
+                        # Skapa markdown-fil från författningstexten
+                        markdown_file = create_markdown_file(data, json_file)
+
                         # Konvertera ISO datetime till git-format
                         dt = datetime.fromisoformat(utfardad_datetime.replace("Z", "+00:00"))
                         git_date = dt.strftime("%Y-%m-%d %H:%M:%S %z")
@@ -52,13 +94,13 @@ def generate_git_commands():
                         # Skapa commit-meddelande
                         commit_message = f"Add {beteckning}: {rubrik}"
                         
-                        # Skapa git commit-kommando
-                        git_command = f'git add "{json_file}" && git commit --author-date="{git_date}" -m "{commit_message}"\n'
+                        # Skapa git commit-kommando som bara lägger till markdown-filen
+                        git_command = f'git add "{markdown_file}" && git commit --author-date="{git_date}" -m "{commit_message}"\n'
                         
                         output_file.write(git_command)
                         processed_count += 1
                         
-                        print(f"Processerad: {json_file} - {beteckning}")
+                        print(f"Processerad: {json_file} -> {markdown_file} - {beteckning}")
                     else:
                         print(f"Ingen utfärdandedatum i: {json_file}")
                         skipped_count += 1
